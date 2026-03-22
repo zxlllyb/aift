@@ -10,8 +10,8 @@ const client = new Client({
 });
 
 client.connect()
-  .then(() => console.log('DB 연결 성공'))
-  .catch(err => console.error('DB 연결 에러:', err));
+  .then(() => console.log('DB Connected'))
+  .catch(err => console.error('DB Error:', err));
 
 app.get('/', async (req, res) => {
   try {
@@ -19,14 +19,14 @@ app.get('/', async (req, res) => {
     if (result.rows.length > 0) {
       res.send(`hello ${result.rows[0].name}`);
     } else {
-      res.send('데이터가 없습니다.');
+      res.send('No data found');
     }
   } catch (err) {
     console.error(err);
-    res.status(500).send('서버 에러');
+    res.status(500).send('Server Error');
   }
 });
 
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Server is running on ${port}`);
 });
