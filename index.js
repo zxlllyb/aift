@@ -1,25 +1,32 @@
-ssl: {
-    rejectUnauthorized: false // Neon 접속 시 SSL 설정 필요
-  }
+const express = require('express');
+const { Client } = require('pg');
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+const client = new Client({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
 client.connect()
-  .then(() => console.log('DB 연결 성공!'))
+  .then(() => console.log('DB 연결 성공'))
   .catch(err => console.error('DB 연결 에러:', err));
 
 app.get('/', async (req, res) => {
   try {
-    // name 컬럼만 조회하는 쿼리
     const result = await client.query('SELECT name FROM test LIMIT 1');
-    
     if (result.rows.length > 0) {
-      const name = result.rows[0].name;
-      res.send(`hello ${name}`);
+      res.send(`hello ${result.rows[0].name}`);
     } else {
       res.send('데이터가 없습니다.');
     }
   } catch (err) {
     console.error(err);
-    res.status(500).send('서버 에러가 발생했습니다.');
+    res.status(500).send('서버 에러');
   }
+});
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
