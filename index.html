@@ -3,136 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEON FOCUS & BOUNCE</title>
+    <title>NEON FAST BASKETBALL</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; overflow: hidden; }
-        .timer-card { background: rgba(30, 41, 59, 0.9); padding: 1.5rem; border-radius: 2rem; border: 1px solid rgba(56, 189, 248, 0.4); text-align: center; width: 100%; max-width: 380px; z-index: 10; margin-bottom: 20px; }
+        .timer-card { background: rgba(30, 41, 59, 0.9); padding: 1.5rem; border-radius: 2rem; border: 1px solid rgba(56, 189, 248, 0.4); text-align: center; width: 100%; max-width: 380px; z-index: 10; margin-bottom: 20px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
         #display { font-family: 'JetBrains Mono', monospace; font-size: 3.5rem; color: #00f2ff; text-shadow: 0 0 20px rgba(0, 242, 255, 0.6); margin: 0.5rem 0; }
         .btn-group { display: flex; gap: 10px; justify-content: center; }
-        button { padding: 0.7rem 1.2rem; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: 0.3s; }
+        button { padding: 0.7rem 1.2rem; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .start-btn { background: #0ea5e9; color: white; }
         .stop-btn { background: #e11d48; color: white; }
-        .game-toggle-btn { background: #8b5cf6; color: white; margin-top: 10px; width: 100%; }
+        .game-toggle-btn { background: #f59e0b; color: white; margin-top: 10px; width: 100%; font-size: 1rem; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
 
-        /* 🎮 미니게임 캔버스 */
-        #gameArea { display: none; position: relative; width: 100%; max-width: 400px; height: 300px; background: #020617; border: 2px solid #8b5cf6; border-radius: 1rem; overflow: hidden; margin-top: 10px; }
-        #ball { position: absolute; width: 15px; height: 15px; background: #00f2ff; border-radius: 50%; box-shadow: 0 0 15px #00f2ff; }
-        #paddle { position: absolute; bottom: 10px; width: 80px; height: 10px; background: #8b5cf6; border-radius: 5px; box-shadow: 0 0 10px #8b5cf6; }
-        #scoreBoard { position: absolute; top: 10px; right: 10px; color: #8b5cf6; font-family: 'JetBrains Mono'; }
-
-        .history-container { width: 100%; max-width: 380px; background: rgba(15, 23, 42, 0.5); border-radius: 1.5rem; padding: 1rem; border: 1px solid rgba(255, 255, 255, 0.1); max-height: 150px; overflow-y: auto; }
-        .history-item { display: flex; justify-content: space-between; font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-    </style>
-</head>
-<body>
-
-    <div class="timer-card">
-        <h1 style="font-size: 1rem; color: #38bdf8; margin: 0;">FOCUS TIMER</h1>
-        <div id="display">00:00:00</div>
+        /* 🏀 농구 게임 구역 */
+        #gameArea { display: none; position: relative; width: 100%; max-width: 400px; height: 420px; background: #020617; border: 3px solid #f59e0b; border-radius: 1rem; overflow: hidden; margin-top: 10px; cursor: crosshair; }
         
-        <div class="btn-group">
-            <button id="startBtn" class="start-btn" onclick="startTimer()">START</button>
-            <button id="stopBtn" class="stop-btn" onclick="stopTimer()" style="display: none;">STOP</button>
-        </div>
-        <button class="game-toggle-btn" onclick="toggleGame()">🎮 BRAIN BREAK GAME</button>
+        /* 농구공 스타일 */
+        #ball { position: absolute; width: 45px; height: 45px; background: radial-gradient(circle at 30% 30%, #fb923c, #ea580c); border: 2px solid #000; border-radius: 50%; box-shadow: 0 0 20px rgba(234, 88, 12, 0.4); z-index: 5; transition: none; }
 
-        <div id="gameArea">
-            <div id="scoreBoard">Score: 0</div>
-            <div id="ball"></div>
-            <div id="paddle"></div>
-        </div>
-    </div>
+        /* 골대 & 백보드 */
+        #backboard { position: absolute; top: 30px; left: 50%; transform: translateX(-50%); width: 120px; height: 80px; border: 4px solid #fff; border-radius: 5px; background: rgba(255,255,255,0.1); }
+        #hoop { position: absolute; top: 90px; left: 50%; transform: translateX(-50%); width: 70px; height: 8px; background: #ef4444; border-radius: 10px; z-index: 6; }
+        #net { position: absolute; top: 98px; left: 50%; transform: translateX(-50%); width: 55px; height: 45px; border: 2px dashed rgba(255,255,255,0.5); border-top: none; border-radius: 0 0 15px 15px; }
 
-    <div class="history-container">
-        <ul id="historyList" style="list-style: none; padding: 0; margin: 0;"></ul>
-    </div>
+        #scoreBoard { position: absolute; top: 15px; left: 15px; color: #f59e0b; font-family: 'JetBrains Mono'; font-size: 1.4rem; z-index: 10; }
 
-    <script>
-        let timer, seconds = 0;
-        
-        // 🏠 초기 데이터 불러오기
-        window.onload = async () => {
-            try {
-                const res = await fetch('/api/study/logs');
-                const logs = await res.json();
-                logs.forEach(log => addHistoryToUI(new Date(log.createdAt).toLocaleDateString(), formatTime(log.duration)));
-            } catch(e) {}
-        };
-
-        function formatTime(s) {
-            const h = Math.floor(s/3600).toString().padStart(2,'0'), m = Math.floor((s%3600)/60).toString().padStart(2,'0'), sec = (s%60).toString().padStart(2,'0');
-            return `${h}:${m}:${sec}`;
-        }
-
-        function startTimer() {
-            document.getElementById('startBtn').style.display='none';
-            document.getElementById('stopBtn').style.display='block';
-            timer = setInterval(() => { seconds++; document.getElementById('display').innerText = formatTime(seconds); }, 1000);
-        }
-
-        async function stopTimer() {
-            clearInterval(timer); timer = null;
-            await fetch('/api/study/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({subject: "Study", duration: seconds}) });
-            addHistoryToUI("Today", formatTime(seconds));
-            seconds = 0; document.getElementById('display').innerText = "00:00:00";
-            document.getElementById('startBtn').style.display='block'; document.getElementById('stopBtn').style.display='none';
-        }
-
-        function addHistoryToUI(date, duration) {
-            const list = document.getElementById('historyList');
-            const item = document.createElement('li');
-            item.className = 'history-item';
-            item.innerHTML = `<span>📅 ${date}</span><span style="color:#00f2ff">${duration}</span>`;
-            list.prepend(item);
-        }
-
-        // 🕹️ 게임 엔진
-        let gameRunning = false, ballX = 100, ballY = 100, dx = 3, dy = 3, paddleX = 150, score = 0;
-        const gameArea = document.getElementById('gameArea'), ball = document.getElementById('ball'), paddle = document.getElementById('paddle');
-
-        function toggleGame() {
-            gameRunning = !gameRunning;
-            gameArea.style.display = gameRunning ? 'block' : 'none';
-            if(gameRunning) { score = 0; ballX = 100; ballY = 100; dx = 3; dy = 3; runGame(); }
-        }
-
-        // 마우스/터치로 패들 이동
-        gameArea.onmousemove = (e) => {
-            let rect = gameArea.getBoundingClientRect();
-            paddleX = e.clientX - rect.left - 40;
-            if(paddleX < 0) paddleX = 0;
-            if(paddleX > 320) paddleX = 320;
-            paddle.style.left = paddleX + "px";
-        };
-
-        function runGame() {
-            if(!gameRunning) return;
-            ballX += dx; ballY += dy;
-
-            // 벽 충돌
-            if(ballX < 0 || ballX > 385) dx = -dx;
-            if(ballY < 0) dy = -dy;
-
-            // 패들 충돌
-            if(ballY > 275 && ballX > paddleX && ballX < paddleX + 80) {
-                dy = -dy;
-                score++;
-                document.getElementById('scoreBoard').innerText = `Score: ${score}`;
-                dx *= 1.05; dy *= 1.05; // 점점 빨라짐
-            }
-
-            // 게임 오버
-            if(ballY > 300) {
-                alert(`Game Over! 집중력 충전 완료: ${score}점`);
-                toggleGame();
-                return;
-            }
-
-            ball.style.left = ballX + "px";
-            ball.style.top = ballY + "px";
-            requestAnimationFrame(runGame);
-        }
-    </script>
-</body>
-</html>
+        .history-container { width: 100%; max-width: 380px; background: rgba(15, 23, 42, 0.5); border-radius: 1.5rem; padding: 1rem; border: 1px solid rgba(255, 255, 25
