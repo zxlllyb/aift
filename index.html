@@ -3,253 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEON STUDY TRACKER v2</title>
+    <title>NEON FOCUS & BOUNCE</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* [1] 전체 배경 디자인 */
-        body {
-            background-color: #0f172a; /* 딥 네이비 */
-            color: #f8fafc;
-            font-family: 'Noto Sans KR', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; overflow: hidden; }
+        .timer-card { background: rgba(30, 41, 59, 0.9); padding: 1.5rem; border-radius: 2rem; border: 1px solid rgba(56, 189, 248, 0.4); text-align: center; width: 100%; max-width: 380px; z-index: 10; margin-bottom: 20px; }
+        #display { font-family: 'JetBrains Mono', monospace; font-size: 3.5rem; color: #00f2ff; text-shadow: 0 0 20px rgba(0, 242, 255, 0.6); margin: 0.5rem 0; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; }
+        button { padding: 0.7rem 1.2rem; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: 0.3s; }
+        .start-btn { background: #0ea5e9; color: white; }
+        .stop-btn { background: #e11d48; color: white; }
+        .game-toggle-btn { background: #8b5cf6; color: white; margin-top: 10px; width: 100%; }
 
-        /* [2] 타이머 카드 디자인 */
-        .timer-card {
-            background: rgba(30, 41, 59, 0.8);
-            padding: 2.5rem;
-            border-radius: 2rem;
-            border: 1px solid rgba(56, 189, 248, 0.4);
-            box-shadow: 0 0 30px rgba(0, 242, 255, 0.15);
-            text-align: center;
-            width: 100%;
-            max-width: 450px;
-            backdrop-filter: blur(12px);
-        }
+        /* 🎮 미니게임 캔버스 */
+        #gameArea { display: none; position: relative; width: 100%; max-width: 400px; height: 300px; background: #020617; border: 2px solid #8b5cf6; border-radius: 1rem; overflow: hidden; margin-top: 10px; }
+        #ball { position: absolute; width: 15px; height: 15px; background: #00f2ff; border-radius: 50%; box-shadow: 0 0 15px #00f2ff; }
+        #paddle { position: absolute; bottom: 10px; width: 80px; height: 10px; background: #8b5cf6; border-radius: 5px; box-shadow: 0 0 10px #8b5cf6; }
+        #scoreBoard { position: absolute; top: 10px; right: 10px; color: #8b5cf6; font-family: 'JetBrains Mono'; }
 
-        h1 {
-            color: #38bdf8;
-            font-size: 1.2rem;
-            letter-spacing: 3px;
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-        }
-
-        /* [3] 숫자 표시부 (네온 효과) */
-        #display {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 4.8rem;
-            color: #00f2ff;
-            text-shadow: 0 0 25px rgba(0, 242, 255, 0.6);
-            margin: 1.5rem 0;
-            font-variant-numeric: tabular-nums;
-        }
-
-        /* [4] 버튼 스타일 */
-        .btn-group {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        button {
-            padding: 1rem 2rem;
-            font-size: 1rem;
-            font-weight: 700;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-transform: uppercase;
-        }
-
-        .start-btn {
-            background: linear-gradient(135deg, #0ea5e9, #0284c7);
-            color: white;
-            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
-        }
-
-        .start-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.6);
-        }
-
-        .stop-btn {
-            background: linear-gradient(135deg, #e11d48, #be123c);
-            color: white;
-            box-shadow: 0 4px 15px rgba(225, 29, 72, 0.4);
-        }
-
-        .stop-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(225, 29, 72, 0.6);
-        }
-
-        /* [5] 기록 리스트 디자인 */
-        .history-container {
-            margin-top: 2rem;
-            width: 100%;
-            max-width: 450px;
-            background: rgba(15, 23, 42, 0.5);
-            border-radius: 1.5rem;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .history-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 0.5rem;
-        }
-
-        .history-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            max-height: 250px;
-            overflow-y: auto;
-        }
-
-        .history-item {
-            background: rgba(255, 255, 255, 0.03);
-            margin-bottom: 8px;
-            padding: 12px 15px;
-            border-radius: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 3px solid #0ea5e9;
-            font-size: 0.9rem;
-        }
-
-        .history-item span.duration {
-            color: #00f2ff;
-            font-weight: bold;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        /* 스크롤바 커스텀 */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .history-container { width: 100%; max-width: 380px; background: rgba(15, 23, 42, 0.5); border-radius: 1.5rem; padding: 1rem; border: 1px solid rgba(255, 255, 255, 0.1); max-height: 150px; overflow-y: auto; }
+        .history-item { display: flex; justify-content: space-between; font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
     </style>
 </head>
 <body>
 
     <div class="timer-card">
-        <h1>Focus Session</h1>
+        <h1 style="font-size: 1rem; color: #38bdf8; margin: 0;">FOCUS TIMER</h1>
         <div id="display">00:00:00</div>
         
         <div class="btn-group">
-            <button id="startBtn" class="start-btn" onclick="startTimer()">Start</button>
-            <button id="stopBtn" class="stop-btn" onclick="stopTimer()" style="display: none;">Stop & Save</button>
+            <button id="startBtn" class="start-btn" onclick="startTimer()">START</button>
+            <button id="stopBtn" class="stop-btn" onclick="stopTimer()" style="display: none;">STOP</button>
+        </div>
+        <button class="game-toggle-btn" onclick="toggleGame()">🎮 BRAIN BREAK GAME</button>
+
+        <div id="gameArea">
+            <div id="scoreBoard">Score: 0</div>
+            <div id="ball"></div>
+            <div id="paddle"></div>
         </div>
     </div>
 
     <div class="history-container">
-        <div class="history-header">
-            <span style="font-weight: bold; color: #94a3b8;">Study History</span>
-            <span id="logCount" style="color: #38bdf8; font-size: 0.8rem;">0 sessions</span>
-        </div>
-        <ul id="historyList" class="history-list">
-            </ul>
+        <ul id="historyList" style="list-style: none; padding: 0; margin: 0;"></ul>
     </div>
 
     <script>
-        let timer;
-        let seconds = 0;
-
-        // 🏠 1. 페이지 로드 시 DB에서 기록 가져오기
+        let timer, seconds = 0;
+        
+        // 🏠 초기 데이터 불러오기
         window.onload = async () => {
             try {
-                const response = await fetch('/api/study/logs');
-                const logs = await response.json();
-                logs.forEach(log => {
-                    const date = new Date(log.createdAt).toLocaleDateString();
-                    addHistoryToUI(date, formatTime(log.duration));
-                });
-                updateLogCount();
-            } catch (err) {
-                console.error("데이터 로드 실패:", err);
-            }
+                const res = await fetch('/api/study/logs');
+                const logs = await res.json();
+                logs.forEach(log => addHistoryToUI(new Date(log.createdAt).toLocaleDateString(), formatTime(log.duration)));
+            } catch(e) {}
         };
 
-        // ⏱ 2. 시간 포맷 변환 (00:00:00)
         function formatTime(s) {
-            const h = Math.floor(s / 3600).toString().padStart(2, '0');
-            const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
-            const sec = (s % 60).toString().padStart(2, '0');
+            const h = Math.floor(s/3600).toString().padStart(2,'0'), m = Math.floor((s%3600)/60).toString().padStart(2,'0'), sec = (s%60).toString().padStart(2,'0');
             return `${h}:${m}:${sec}`;
         }
 
-        // ▶️ 3. 타이머 시작
         function startTimer() {
-            document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('stopBtn').style.display = 'block';
-            
-            timer = setInterval(() => {
-                seconds++;
-                document.getElementById('display').innerText = formatTime(seconds);
-            }, 1000);
+            document.getElementById('startBtn').style.display='none';
+            document.getElementById('stopBtn').style.display='block';
+            timer = setInterval(() => { seconds++; document.getElementById('display').innerText = formatTime(seconds); }, 1000);
         }
 
-        // ⏹ 4. 타이머 종료 및 DB 저장 (핵심!)
         async function stopTimer() {
-            if (!confirm("공부를 마치고 기록을 저장할까요?")) return;
-
-            clearInterval(timer);
-            timer = null;
-
-            // 서버(Neon DB)로 기록 전송
-            try {
-                const response = await fetch('/api/study/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        subject: "General Study",
-                        duration: seconds
-                    })
-                });
-
-                if (response.ok) {
-                    const date = new Date().toLocaleDateString();
-                    addHistoryToUI(date, formatTime(seconds));
-                    updateLogCount();
-                    
-                    // 초기화
-                    seconds = 0;
-                    document.getElementById('display').innerText = "00:00:00";
-                    document.getElementById('startBtn').style.display = 'block';
-                    document.getElementById('stopBtn').style.display = 'none';
-                }
-            } catch (err) {
-                alert("저장에 실패했습니다. 서버 연결을 확인하세요.");
-            }
+            clearInterval(timer); timer = null;
+            await fetch('/api/study/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({subject: "Study", duration: seconds}) });
+            addHistoryToUI("Today", formatTime(seconds));
+            seconds = 0; document.getElementById('display').innerText = "00:00:00";
+            document.getElementById('startBtn').style.display='block'; document.getElementById('stopBtn').style.display='none';
         }
 
-        // 📝 5. 화면 리스트에 추가
         function addHistoryToUI(date, duration) {
             const list = document.getElementById('historyList');
             const item = document.createElement('li');
             item.className = 'history-item';
-            item.innerHTML = `
-                <span>📅 ${date}</span>
-                <span class="duration">${duration}</span>
-            `;
+            item.innerHTML = `<span>📅 ${date}</span><span style="color:#00f2ff">${duration}</span>`;
             list.prepend(item);
         }
 
-        function updateLogCount() {
-            const count = document.getElementById('historyList').getElementsByTagName('li').length;
-            document.getElementById('logCount').innerText = `${count} sessions`;
+        // 🕹️ 게임 엔진
+        let gameRunning = false, ballX = 100, ballY = 100, dx = 3, dy = 3, paddleX = 150, score = 0;
+        const gameArea = document.getElementById('gameArea'), ball = document.getElementById('ball'), paddle = document.getElementById('paddle');
+
+        function toggleGame() {
+            gameRunning = !gameRunning;
+            gameArea.style.display = gameRunning ? 'block' : 'none';
+            if(gameRunning) { score = 0; ballX = 100; ballY = 100; dx = 3; dy = 3; runGame(); }
+        }
+
+        // 마우스/터치로 패들 이동
+        gameArea.onmousemove = (e) => {
+            let rect = gameArea.getBoundingClientRect();
+            paddleX = e.clientX - rect.left - 40;
+            if(paddleX < 0) paddleX = 0;
+            if(paddleX > 320) paddleX = 320;
+            paddle.style.left = paddleX + "px";
+        };
+
+        function runGame() {
+            if(!gameRunning) return;
+            ballX += dx; ballY += dy;
+
+            // 벽 충돌
+            if(ballX < 0 || ballX > 385) dx = -dx;
+            if(ballY < 0) dy = -dy;
+
+            // 패들 충돌
+            if(ballY > 275 && ballX > paddleX && ballX < paddleX + 80) {
+                dy = -dy;
+                score++;
+                document.getElementById('scoreBoard').innerText = `Score: ${score}`;
+                dx *= 1.05; dy *= 1.05; // 점점 빨라짐
+            }
+
+            // 게임 오버
+            if(ballY > 300) {
+                alert(`Game Over! 집중력 충전 완료: ${score}점`);
+                toggleGame();
+                return;
+            }
+
+            ball.style.left = ballX + "px";
+            ball.style.top = ballY + "px";
+            requestAnimationFrame(runGame);
         }
     </script>
 </body>
