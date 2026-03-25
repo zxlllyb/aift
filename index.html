@@ -3,26 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEON PRECISION HOOPS</title>
+    <title>NEON HOOPS TIMER</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { background: #020617; color: #f8fafc; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; overflow: hidden; }
-        .timer-card { background: rgba(30, 41, 59, 0.9); padding: 1.5rem; border-radius: 2rem; border: 2px solid #38bdf8; text-align: center; width: 100%; max-width: 380px; z-index: 10; box-shadow: 0 0 30px rgba(56, 189, 248, 0.2); }
+        .timer-card { background: rgba(30, 41, 59, 0.9); padding: 1.5rem; border-radius: 2rem; border: 2px solid #38bdf8; text-align: center; width: 100%; max-width: 380px; z-index: 10; box-shadow: 0 0 30px rgba(56, 189, 248, 0.2); position: relative; }
         #display { font-family: 'JetBrains Mono', monospace; font-size: 3.5rem; color: #00f2ff; text-shadow: 0 0 20px #00f2ff; margin: 0.5rem 0; }
         button { padding: 0.7rem 1.2rem; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .start-btn { background: #0ea5e9; color: white; }
         .stop-btn { background: #e11d48; color: white; }
         .game-toggle-btn { background: #f59e0b; color: white; margin-top: 10px; width: 100%; font-size: 1rem; }
 
-        /* 🏀 농구 게임장 (이미지 없이 CSS로만 제작) */
-        #gameArea { display: none; position: relative; width: 100%; max-width: 400px; height: 450px; background: radial-gradient(circle at center, #1e293b, #020617); border: 4px solid #f59e0b; border-radius: 1rem; margin-top: 10px; cursor: crosshair; }
-        
-        #ball { position: absolute; width: 44px; height: 44px; background: radial-gradient(circle at 30% 30%, #fb923c, #c2410c); border: 2px solid #000; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 5; }
-        #backboard { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); width: 100px; height: 70px; border: 3px solid #fff; background: rgba(255,255,255,0.05); }
-        #hoop { position: absolute; top: 95px; left: 50%; transform: translateX(-50%); width: 64px; height: 8px; background: #ef4444; border-radius: 10px; z-index: 6; }
-        #scoreBoard { position: absolute; top: 15px; left: 15px; color: #f59e0b; font-family: 'JetBrains Mono'; font-size: 1.5rem; text-shadow: 0 0 10px #f59e0b; }
+        /* 🏀 농구 게임장 */
+        #gameArea { display: none; position: relative; width: 100%; height: 350px; background: #020617; border: 2px solid #f59e0b; border-radius: 1rem; margin-top: 10px; cursor: crosshair; overflow: hidden; }
+        #ball { position: absolute; width: 40px; height: 40px; background: radial-gradient(circle at 30% 30%, #fb923c, #c2410c); border: 2px solid #000; border-radius: 50%; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5; }
+        #backboard { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 80px; height: 60px; border: 2px solid #fff; background: rgba(255,255,255,0.1); }
+        #hoop { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); width: 50px; height: 6px; background: #ef4444; border-radius: 5px; z-index: 6; }
+        #scoreBoard { position: absolute; top: 10px; left: 10px; color: #f59e0b; font-size: 1.2rem; font-weight: bold; }
 
-        .history-container { width: 100%; max-width: 380px; margin-top: 15px; max-height: 80px; overflow-y: auto; font-size: 0.8rem; opacity: 0.7; }
+        .history-container { width: 100%; max-width: 380px; margin-top: 15px; font-size: 0.8rem; text-align: center; }
     </style>
 </head>
 <body>
@@ -31,66 +30,79 @@
         <div id="display">00:00:00</div>
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button id="startBtn" class="start-btn" onclick="startTimer()">START</button>
-            <button id="stopBtn" class="stop-btn" onclick="stopTimer()" style="display: none;">STOP</button>
+            <button id="stopBtn" class="stop-btn" onclick="stopTimer()" style="display: none;">STOP & SAVE</button>
         </div>
         <button class="game-toggle-btn" onclick="toggleGame()">🏀 FOCUS SHOOT (15s)</button>
 
         <div id="gameArea" onmousedown="shootBall(event)">
-            <div id="scoreBoard">0</div>
+            <div id="scoreBoard">SCORE: 0</div>
             <div id="backboard"></div>
             <div id="hoop"></div>
             <div id="ball"></div>
         </div>
     </div>
 
-    <div class="history-container"><ul id="historyList" style="list-style:none; padding:0;"></ul></div>
+    <div class="history-container" id="historyList"></div>
 
     <script>
         let timer, seconds = 0, gameRunning = false, score = 0, isShooting = false;
         const ball = document.getElementById('ball');
+        const gameArea = document.getElementById('gameArea');
 
-        // 타이머 로직 (기존 DB 연동 유지)
-        window.onload = async () => { try { const res = await fetch('/api/study/logs'); const logs = await res.json(); logs.forEach(log => addHistoryToUI(new Date(log.createdAt).toLocaleDateString(), formatTime(log.duration))); } catch(e){} };
-        function formatTime(s) { return `${Math.floor(s/3600).toString().padStart(2,'0')}:${Math.floor((s%3600)/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; }
-        function startTimer() { document.getElementById('startBtn').style.display='none'; document.getElementById('stopBtn').style.display='block'; timer = setInterval(() => { seconds++; document.getElementById('display').innerText = formatTime(seconds); }, 1000); }
-        async function stopTimer() { clearInterval(timer); await fetch('/api/study/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({subject: "Study", duration: seconds}) }); location.reload(); }
+        // 🏠 [호환성 유지] 데이터 불러오기
+        window.onload = async () => {
+            try {
+                const res = await fetch('/api/study/logs');
+                const logs = await res.json();
+                const list = document.getElementById('historyList');
+                logs.slice(0, 3).forEach(log => {
+                    list.innerHTML += `<div>📅 ${new Date(log.createdAt).toLocaleDateString()} - ${formatTime(log.duration)}</div>`;
+                });
+            } catch(e) { console.error("DB Load Error", e); }
+        };
 
-        // 🏀 농구 엔진 (타격감 & 정확도 수정)
+        function formatTime(s) {
+            const h = Math.floor(s/3600).toString().padStart(2,'0');
+            const m = Math.floor((s%3600)/60).toString().padStart(2,'0');
+            const sec = (s%60).toString().padStart(2,'0');
+            return `${h}:${m}:${sec}`;
+        }
+
+        // ⏱️ 타이머 로직
+        function startTimer() {
+            document.getElementById('startBtn').style.display='none';
+            document.getElementById('stopBtn').style.display='inline-block';
+            timer = setInterval(() => { seconds++; document.getElementById('display').innerText = formatTime(seconds); }, 1000);
+        }
+
+        async function stopTimer() {
+            clearInterval(timer);
+            // DB에 데이터 전송 (subject 필수!)
+            try {
+                await fetch('/api/study/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ subject: "Study", duration: seconds })
+                });
+                alert("기록이 저장되었습니다!");
+                location.reload();
+            } catch(e) { alert("저장 실패!"); }
+        }
+
+        // 🏀 농구 로직
         function toggleGame() {
             gameRunning = !gameRunning;
-            document.getElementById('gameArea').style.display = gameRunning ? 'block' : 'none';
-            if(gameRunning) { score = 0; document.getElementById('scoreBoard').innerText = "0"; resetBall(); setTimeout(() => { if(gameRunning) { alert(`집중력 충전 완료! 스코어: ${score}`); toggleGame(); } }, 15000); }
+            gameArea.style.display = gameRunning ? 'block' : 'none';
+            if(gameRunning) {
+                score = 0;
+                document.getElementById('scoreBoard').innerText = "SCORE: 0";
+                resetBall();
+                setTimeout(() => { if(gameRunning) { alert(`게임 종료! 점수: ${score}`); toggleGame(); } }, 15000);
+            }
         }
 
         function resetBall() {
             isShooting = false;
             ball.style.transition = 'none';
-            ball.style.bottom = "30px";
-            ball.style.left = "178px";
-            ball.style.transform = "scale(1)";
-            ball.style.opacity = "1";
-        }
-
-        function shootBall(e) {
-            if(!gameRunning || isShooting) return;
-            isShooting = true;
-
-            // 속도 0.45s (적당한 타격감) + 포물선 느낌 추가
-            ball.style.transition = 'all 0.45s cubic-bezier(0.1, 0.5, 0.5, 1)';
-            ball.style.bottom = "330px"; 
-            ball.style.transform = "scale(0.55)";
-
-            setTimeout(() => {
-                const ballLeft = parseInt(ball.style.left);
-                // 판정 범위를 좁혀서 '정확도' 요구 (155~200px 사이여야 골인)
-                if(ballLeft > 158 && ballLeft < 198) {
-                    score++;
-                    document.getElementById('scoreBoard').innerText = score;
-                    ball.style.transition = 'bottom 0.2s ease-in';
-                    ball.style.bottom = "230px"; // 골대 통과
-                } else {
-                    ball.style.transition = 'all 0.4s ease-in';
-                    ball.style.bottom = "100px"; // 튕겨나감
-                    ball.style.opacity = "0";
-                }
-                setTimeout(resetBall, 500);
+            ball.style.bottom = "20px";
+            ball.style.left = "50%";
