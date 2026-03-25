@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON STUDY TRACKER v2</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* [1] 전체 배경 디자인 */
+        body {
+            background-color: #0f172a; /* 딥 네이비 */
+            color: #f8fafc;
+            font-family: 'Noto Sans KR', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* [2] 타이머 카드 디자인 */
+        .timer-card {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 2.5rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.15);
+            text-align: center;
+            width: 100%;
+            max-width: 450px;
+            backdrop-filter: blur(12px);
+        }
+
+        h1 {
+            color: #38bdf8;
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+
+        /* [3] 숫자 표시부 (네온 효과) */
+        #display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 4.8rem;
+            color: #00f2ff;
+            text-shadow: 0 0 25px rgba(0, 242, 255, 0.6);
+            margin: 1.5rem 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* [4] 버튼 스타일 */
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            color: white;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
+        }
+
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.6);
+        }
+
+        .stop-btn {
+            background: linear-gradient(135deg, #e11d48, #be123c);
+            color: white;
+            box-shadow: 0 4px 15px rgba(225, 29, 72, 0.4);
+        }
+
+        .stop-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(225, 29, 72, 0.6);
+        }
+
+        /* [5] 기록 리스트 디자인 */
+        .history-container {
+            margin-top: 2rem;
+            width: 100%;
+            max-width: 450px;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.03);
+            margin-bottom: 8px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid #0ea5e9;
+            font-size: 0.9rem;
+        }
+
+        .history-item span.duration {
+            color: #00f2ff;
+            font-weight: bold;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* 스크롤바 커스텀 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="timer-card">
+        <h1>Focus Session</h1>
+        <div id="display">00:00:00</div>
+        
+        <div class="btn-group">
+            <button id="startBtn" class="start-btn" onclick="startTimer()">Start</button>
+            <button id="stopBtn" class="stop-btn" onclick="stopTimer()" style="display: none;">Stop & Save</button>
+        </div>
+    </div>
+
+    <div class="history-container">
+        <div class="history-header">
+            <span style="font-weight: bold; color: #94a3b8;">Study History</span>
+            <span id="logCount" style="color: #38bdf8; font-size: 0.8rem;">0 sessions</span>
+        </div>
+        <ul id="historyList" class="history-list">
+            </ul>
+    </div>
+
+    <script>
+        let timer;
+        let seconds = 0;
+
+        // 🏠 1. 페이지 로드 시 DB에서 기록 가져오기
+        window.onload = async () => {
+            try {
+                const response = await fetch('/api/study/logs');
+                const logs = await response.json();
+                logs.forEach(log => {
+                    const date = new Date(log.createdAt).toLocaleDateString();
+                    addHistoryToUI(date, formatTime(log.duration));
+                });
+                updateLogCount();
+            } catch (err) {
+                console.error("데이터 로드 실패:", err);
+            }
+        };
+
+        // ⏱ 2. 시간 포맷 변환 (00:00:00)
+        function formatTime(s) {
+            const h = Math.floor(s / 3600).toString().padStart(2, '0');
+            const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+            const sec = (s % 60).toString().padStart(2, '0');
+            return `${h}:${m}:${sec}`;
+        }
+
+        // ▶️ 3. 타이머 시작
+        function startTimer() {
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'block';
+            
+            timer = setInterval(() => {
+                seconds++;
+                document.getElementById('display').innerText = formatTime(seconds);
+            }, 1000);
+        }
+
+        // ⏹ 4. 타이머 종료 및 DB 저장 (핵심!)
+        async function stopTimer() {
+            if (!confirm("공부를 마치고 기록을 저장할까요?")) return;
+
+            clearInterval(timer);
+            timer = null;
+
+            // 서버(Neon DB)로 기록 전송
+            try {
+                const response = await fetch('/api/study/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        subject: "General Study",
+                        duration: seconds
+                    })
+                });
+
+                if (response.ok) {
+                    const date = new Date().toLocaleDateString();
+                    addHistoryToUI(date, formatTime(seconds));
+                    updateLogCount();
+                    
+                    // 초기화
+                    seconds = 0;
+                    document.getElementById('display').innerText = "00:00:00";
+                    document.getElementById('startBtn').style.display = 'block';
+                    document.getElementById('stopBtn').style.display = 'none';
+                }
+            } catch (err) {
+                alert("저장에 실패했습니다. 서버 연결을 확인하세요.");
+            }
+        }
+
+        // 📝 5. 화면 리스트에 추가
+        function addHistoryToUI(date, duration) {
+            const list = document.getElementById('historyList');
+            const item = document.createElement('li');
+            item.className = 'history-item';
+            item.innerHTML = `
+                <span>📅 ${date}</span>
+                <span class="duration">${duration}</span>
+            `;
+            list.prepend(item);
+        }
+
+        function updateLogCount() {
+            const count = document.getElementById('historyList').getElementsByTagName('li').length;
+            document.getElementById('logCount').innerText = `${count} sessions`;
+        }
+    </script>
+</body>
+</html>
