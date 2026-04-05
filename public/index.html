@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Focus Timer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black text-white flex flex-col items-center justify-center min-h-screen font-sans">
+    <div class="bg-zinc-900 p-10 rounded-[3rem] shadow-2xl border border-zinc-800 text-center w-80">
+        <h1 class="text-zinc-500 text-sm font-bold tracking-widest uppercase mb-6">Study Timer</h1>
+        <div id="timer" class="text-6xl font-light mb-10 tracking-tighter">00:00:00</div>
+        
+        <button id="mainBtn" class="w-full py-4 bg-white text-black rounded-2xl font-bold hover:scale-95 transition-transform">시작</button>
+        
+        <div id="history" class="mt-10 text-left space-y-2 text-zinc-400 text-xs">
+            </div>
+    </div>
+
+    <script>
+        let seconds = 0;
+        let timerId = null;
+        const display = document.getElementById('timer');
+        const btn = document.getElementById('mainBtn');
+
+        function format(s) {
+            return new Date(s * 1000).toISOString().substr(11, 8);
+        }
+
+        async function loadHistory() {
+            const res = await fetch('/api/history');
+            const data = await res.json();
+            document.getElementById('history').innerHTML = data.map(i => 
+                `<div class="flex justify-between border-b border-zinc-800 pb-1">
+                    <span>${new Date(i.created_at).toLocaleDateString()}</span>
+                    <span class="text-white">${format(i.duration_seconds)}</span>
+                </div>`
+            ).join('');
+        }
+
+        btn.onclick = async () => {
+            if (!timerId) {
+                timerId = setInterval(() => { seconds++; display.innerText = format(seconds); }, 1000);
+                btn.innerText = "종료 및 저장";
+                btn.className = "w-full py-4 bg-red-600 text-white rounded-2xl font-bold hover:scale-95 transition-transform";
+            } else {
+                clearInterval(timerId);
+                timerId = null;
+                await fetch('/api/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ duration: seconds })
+                });
+                seconds = 0;
+                display.innerText = "00:00:00";
+                btn.innerText = "시작";
+                btn.className = "w-full py-4 bg-white text-black rounded-2xl font-bold hover:scale-95 transition-transform";
+                loadHistory();
+            }
+        };
+        loadHistory();
+    </script>
+</body>
+</html>
