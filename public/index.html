@@ -2,39 +2,82 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Focus Timer</title>
+    <title>Focus & Hoop - Junseong Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        canvas { touch-action: none; } /* 모바일 터치 방해 금지 */
+        .glass { background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(10px); }
+    </style>
 </head>
-<body class="bg-black text-white flex flex-col items-center justify-center min-h-screen font-sans">
-    <div class="bg-zinc-900 p-10 rounded-[3rem] shadow-2xl border border-zinc-800 text-center w-80">
-        <h1 class="text-zinc-500 text-sm font-bold tracking-widest uppercase mb-6">Study Timer</h1>
-        <div id="timer" class="text-6xl font-light mb-10 tracking-tighter">00:00:00</div>
+<body class="bg-black text-white flex flex-col items-center py-10 font-sans min-h-screen">
+
+    <div class="bg-zinc-900 p-8 rounded-[2.5rem] shadow-2xl border border-zinc-800 text-center w-80 mb-6">
+        <h1 class="text-zinc-500 text-xs font-bold tracking-widest uppercase mb-4">Study Timer</h1>
         
+        <select id="subjectSelect" class="bg-zinc-800 text-white text-sm rounded-xl px-4 py-2 mb-6 outline-none border border-zinc-700 focus:border-white transition-all w-full">
+            <option value="국어">국어</option>
+            <option value="수학">수학</option>
+            <option value="영어">영어</option>
+            <option value="코딩">코딩</option>
+        </select>
+
+        <div id="timer" class="text-6xl font-light mb-8 tracking-tighter">00:00:00</div>
         <button id="mainBtn" class="w-full py-4 bg-white text-black rounded-2xl font-bold hover:scale-95 transition-transform">시작</button>
         
-        <div id="history" class="mt-10 text-left space-y-2 text-zinc-400 text-xs">
-            </div>
+        <div id="history" class="mt-8 text-left space-y-2 text-zinc-500 text-[10px] max-h-32 overflow-y-auto"></div>
+    </div>
+
+    <div class="bg-zinc-900 p-6 rounded-[2rem] border border-zinc-800 w-80 mb-6">
+        <h2 class="text-zinc-500 text-xs font-bold uppercase mb-4 tracking-widest text-center">Study Stats</h2>
+        <canvas id="studyChart"></canvas>
+    </div>
+
+    <div class="bg-zinc-900 p-4 rounded-[2rem] border border-zinc-800 w-80 text-center relative overflow-hidden">
+        <h2 class="text-zinc-500 text-xs font-bold uppercase mb-2 tracking-widest">Break Time: Basketball</h2>
+        <p class="text-[10px] text-zinc-600 mb-2">공을 드래그해서 골대에 넣으세요!</p>
+        <div class="relative bg-zinc-800 rounded-xl overflow-hidden h-64 w-full">
+            <canvas id="gameCanvas" width="280" height="256"></canvas>
+            <div id="scoreDisplay" class="absolute top-2 right-4 text-2xl font-bold text-white/20">0</div>
+        </div>
+        <button onclick="resetGame()" class="mt-3 text-xs text-zinc-500 hover:text-white transition-colors">게임 초기화</button>
     </div>
 
     <script>
-        let seconds = 0;
-        let timerId = null;
-        const display = document.getElementById('timer');
-        const btn = document.getElementById('mainBtn');
+        // --- [1. 타이머 & 기록 로직] ---
+        let seconds = 0, timerId = null;
+        const display = document.getElementById('timer'), btn = document.getElementById('mainBtn');
+        let myChart = null;
 
-        function format(s) {
-            return new Date(s * 1000).toISOString().substr(11, 8);
-        }
+        function format(s) { return new Date(s * 1000).toISOString().substr(11, 8); }
 
-        async function loadHistory() {
-            const res = await fetch('/api/history');
-            const data = await res.json();
-            document.getElementById('history').innerHTML = data.map(i => 
+        async function loadData() {
+            // 히스토리 로드
+            const hRes = await fetch('/api/history');
+            const hData = await hRes.json();
+            document.getElementById('history').innerHTML = hData.map(i => 
                 `<div class="flex justify-between border-b border-zinc-800 pb-1">
-                    <span>${new Date(i.created_at).toLocaleDateString()}</span>
+                    <span>${i.subject} (${new Date(i.created_at).toLocaleDateString()})</span>
                     <span class="text-white">${format(i.duration_seconds)}</span>
-                </div>`
-            ).join('');
+                </div>`).join('');
+
+            // 차트 로드
+            const cRes = await fetch('/api/chart-data');
+            const cData = await cRes.json();
+            const ctx = document.getElementById('studyChart').getContext('2d');
+            if(myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: cData.map(i => i.subject),
+                    datasets: [{
+                        data: cData.map(i => i.total_seconds),
+                        backgroundColor: ['#FFFFFF', '#71717a', '#3f3f46', '#18181b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { plugins: { legend: { labels: { color: '#a1a1aa', font: { size: 10 } } } } }
+            });
         }
 
         btn.onclick = async () => {
@@ -44,20 +87,29 @@
                 btn.className = "w-full py-4 bg-red-600 text-white rounded-2xl font-bold hover:scale-95 transition-transform";
             } else {
                 clearInterval(timerId);
-                timerId = null;
+                const subject = document.getElementById('subjectSelect').value;
                 await fetch('/api/save', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ duration: seconds })
+                    body: JSON.stringify({ duration: seconds, subject })
                 });
-                seconds = 0;
+                seconds = 0; timerId = null;
                 display.innerText = "00:00:00";
                 btn.innerText = "시작";
                 btn.className = "w-full py-4 bg-white text-black rounded-2xl font-bold hover:scale-95 transition-transform";
-                loadHistory();
+                loadData();
             }
         };
-        loadHistory();
-    </script>
-</body>
-</html>
+
+        // --- [2. 농구 게임 로직] ---
+        const canvas = document.getElementById('gameCanvas'), gCtx = canvas.getContext('2d');
+        let score = 0;
+        let ball = { x: 140, y: 220, r: 12, vx: 0, vy: 0, shooting: false };
+        let hoop = { x: 140, y: 50, w: 40, h: 5 };
+        let isDragging = false, startX, startY;
+
+        function draw() {
+            gCtx.clearRect(0, 0, canvas.width, canvas.height);
+            // 골대
+            gCtx.strokeStyle = '#ef4444'; gCtx.lineWidth = 4;
+            gCtx.strokeRect(hoop.x - hoop.w/2, hoop.y, hoop.w, hoop.h
