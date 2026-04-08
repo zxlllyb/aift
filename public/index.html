@@ -2,80 +2,73 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Junseong's Pro Study & Hoop</title>
+    <title>Junseong's Elite Study & Hoop</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #000; overflow-x: hidden; -webkit-user-select: none; user-select: none; }
+        body { background-color: #000; overflow: hidden; -webkit-user-select: none; user-select: none; }
         canvas { touch-action: none; cursor: crosshair; }
-        .zinc-card { background: #18181b; border: 1px solid #27272a; border-radius: 1.5rem; }
-        /* 스크롤바 숨기기 */
-        ::-webkit-scrollbar { width: 0px; }
+        .zinc-card { background: #111113; border: 1px solid #27272a; border-radius: 2rem; }
+        .glow { filter: drop-shadow(0 0 10px rgba(251, 146, 60, 0.5)); }
     </style>
 </head>
-<body class="text-white font-sans p-6">
+<body class="text-white font-sans p-6 h-screen flex items-center justify-center">
 
-    <div class="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
+    <div class="max-w-7xl w-full flex flex-col md:flex-row gap-6 h-[90vh]">
         
-        <div class="w-full md:w-5/12 space-y-6">
-            <div class="zinc-card p-6 shadow-2xl">
+        <div class="w-full md:w-4/12 flex flex-col gap-6 h-full">
+            <div class="zinc-card p-6 flex-shrink-0">
                 <h1 class="text-zinc-500 text-xs font-bold tracking-widest uppercase mb-4">Focus Timer</h1>
-                <select id="subjectSelect" class="bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 mb-4 w-full outline-none border border-zinc-700 focus:border-white transition-all">
+                <select id="subjectSelect" class="bg-zinc-800 text-white text-sm rounded-xl px-4 py-3 mb-4 w-full outline-none border border-zinc-700 focus:border-white">
                     <option value="국어">📚 국어</option>
                     <option value="수학">📐 수학</option>
                     <option value="영어">🌎 영어</option>
                     <option value="코딩">💻 코딩</option>
                 </select>
-                <div id="timer" class="text-7xl font-extralight mb-6 tracking-tighter text-center">00:00:00</div>
-                <button id="mainBtn" class="w-full py-4 bg-white text-black rounded-2xl font-bold hover:bg-zinc-200 transition-all text-lg">공부 시작</button>
-                <div id="history" class="mt-6 space-y-2 text-[11px] text-zinc-400 max-h-40 overflow-y-auto"></div>
+                <div id="timer" class="text-6xl font-extralight mb-6 tracking-tighter text-center">00:00:00</div>
+                <button id="mainBtn" class="w-full py-4 bg-white text-black rounded-2xl font-bold hover:scale-[0.98] transition-all">공부 시작</button>
+                <div id="history" class="mt-4 space-y-1 text-[10px] text-zinc-500 max-h-24 overflow-y-auto"></div>
             </div>
 
-            <div class="zinc-card p-6 shadow-2xl">
+            <div class="zinc-card p-6 flex-grow flex flex-col items-center justify-center">
                 <h2 class="text-zinc-500 text-xs font-bold uppercase mb-4 tracking-widest">Analysis</h2>
-                <div class="aspect-square">
+                <div class="w-full">
                     <canvas id="studyChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="w-full md:w-7/12">
-            <div class="zinc-card p-4 h-full flex flex-col relative overflow-hidden">
-                <div class="flex justify-between items-center mb-4 px-2">
+        <div class="w-full md:w-8/12 h-full">
+            <div class="zinc-card p-6 h-full flex flex-col relative overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                <div class="flex justify-between items-center mb-4">
                     <div>
-                        <h2 class="text-white text-lg font-bold uppercase tracking-widest">Hoop Master</h2>
-                        <p class="text-xs text-zinc-500">공을 당겨서 궤적을 조절하세요!</p>
+                        <h2 class="text-2xl font-black italic tracking-tighter text-white">HOOP MASTER v2</h2>
+                        <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Physics-based Simulation</p>
                     </div>
-                    <div class="text-right">
-                        <span class="text-zinc-500 text-xs">SCORE</span>
-                        <div id="scoreDisplay" class="text-4xl font-black text-white">0</div>
+                    <div class="bg-zinc-800 px-6 py-2 rounded-2xl border border-zinc-700">
+                        <span class="text-zinc-500 text-[10px] block text-center">SCORE</span>
+                        <div id="scoreDisplay" class="text-3xl font-black text-orange-500">0</div>
                     </div>
                 </div>
                 
-                <div class="flex-grow bg-zinc-900/50 rounded-2xl relative border border-zinc-800/50">
+                <div class="flex-grow bg-gradient-to-b from-zinc-900 to-black rounded-3xl relative border border-zinc-800 shadow-inner">
                     <canvas id="gameCanvas"></canvas>
                 </div>
-                <button onclick="resetGame()" class="mt-4 text-xs text-zinc-600 hover:text-white transition-colors uppercase font-bold tracking-tighter">Reset Game Session</button>
             </div>
         </div>
-
     </div>
 
     <script>
-        // --- [공통 변수] ---
         let seconds = 0, timerId = null, myChart = null;
         const display = document.getElementById('timer'), btn = document.getElementById('mainBtn');
 
-        // --- [데이터 로직] ---
         function format(s) { return new Date(s * 1000).toISOString().substr(11, 8); }
 
         async function loadData() {
             try {
                 const hRes = await fetch('/api/history');
                 const hData = await hRes.json();
-                document.getElementById('history').innerHTML = hData.map(i => 
-                    `<div class="flex justify-between border-b border-zinc-800 pb-1"><span>${i.subject}</span><span class="text-white font-mono">${format(i.duration_seconds)}</span></div>`).join('');
-
+                document.getElementById('history').innerHTML = hData.map(i => `<div class="flex justify-between border-b border-zinc-800 pb-1"><span>${i.subject}</span><span>${format(i.duration_seconds)}</span></div>`).join('');
                 const cRes = await fetch('/api/chart-data');
                 const cData = await cRes.json();
                 const ctx = document.getElementById('studyChart');
@@ -84,124 +77,131 @@
                     type: 'doughnut',
                     data: {
                         labels: cData.map(i => i.subject),
-                        datasets: [{ data: cData.map(i => i.total_seconds), backgroundColor: ['#fff', '#a1a1aa', '#52525b', '#27272a'], borderWidth: 0 }]
+                        datasets: [{ data: cData.map(i => i.total_seconds), backgroundColor: ['#fff', '#666', '#333', '#999'], borderWidth: 0 }]
                     },
-                    options: { plugins: { legend: { position: 'bottom', labels: { color: '#71717a', usePointStyle: true } } } }
+                    options: { plugins: { legend: { position: 'bottom', labels: { color: '#777', font: { size: 10 } } } } }
                 });
-            } catch (e) { console.log("서버 연결 대기 중..."); }
+            } catch (e) { console.log("Waiting for Server..."); }
         }
 
         btn.onclick = async () => {
             if (!timerId) {
                 timerId = setInterval(() => { seconds++; display.innerText = format(seconds); }, 1000);
-                btn.innerText = "집중 종료 및 저장";
-                btn.className = "w-full py-4 bg-red-600 text-white rounded-2xl font-bold transition-all text-lg";
+                btn.innerText = "종료 및 저장";
+                btn.className = "w-full py-4 bg-orange-600 text-white rounded-2xl font-bold transition-all";
             } else {
                 clearInterval(timerId);
                 const subject = document.getElementById('subjectSelect').value;
-                await fetch('/api/save', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ duration: seconds, subject })
-                });
+                await fetch('/api/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ duration: seconds, subject }) });
                 seconds = 0; timerId = null;
                 display.innerText = "00:00:00";
                 btn.innerText = "공부 시작";
-                btn.className = "w-full py-4 bg-white text-black rounded-2xl font-bold transition-all text-lg";
+                btn.className = "w-full py-4 bg-white text-black rounded-2xl font-bold transition-all";
                 loadData();
             }
         };
 
-        // --- [고급 농구 게임 로직] ---
+        // --- 농구 게임 엔진 ---
         const canvas = document.getElementById('gameCanvas'), gCtx = canvas.getContext('2d');
+        let score = 0, particles = [];
+        let ball = { x: 0, y: 0, r: 18, vx: 0, vy: 0, shooting: false, trail: [] };
+        let hoop = { x: 0, y: 0, w: 70, h: 8, boardX: 0, boardY: 0, boardW: 10, boardH: 100 };
+        let isDragging = false, mouseX, mouseY;
+
         function resize() {
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.parentElement.clientHeight;
+            initPositions();
         }
-        window.addEventListener('resize', resize);
-        resize();
-
-        let score = 0;
-        let ball = { x: 80, y: 0, r: 15, vx: 0, vy: 0, shooting: false };
-        let hoop = { x: 0, y: 0, w: 60, h: 8 };
-        let isDragging = false, mouseX, mouseY;
 
         function initPositions() {
-            ball.x = 100; ball.y = canvas.height - 100;
-            hoop.x = canvas.width - 120; hoop.y = 150;
-            ball.shooting = false;
+            ball.x = canvas.width / 2; ball.y = canvas.height - 100; // 공 위치를 중앙 하단으로!
+            ball.vx = 0; ball.vy = 0; ball.shooting = false; ball.trail = [];
+            hoop.x = canvas.width - 150; hoop.y = 180;
+            hoop.boardX = hoop.x + hoop.w / 2; hoop.boardY = hoop.y - 80;
         }
-        initPositions();
 
         canvas.onmousedown = (e) => {
             if (!ball.shooting) {
                 const dist = Math.hypot(e.offsetX - ball.x, e.offsetY - ball.y);
-                if (dist < 30) { isDragging = true; mouseX = e.offsetX; mouseY = e.offsetY; }
+                if (dist < 40) { isDragging = true; mouseX = e.offsetX; mouseY = e.offsetY; }
             }
         };
-
         window.onmousemove = (e) => { if(isDragging) { mouseX = e.offsetX; mouseY = e.offsetY; } };
-
         window.onmouseup = (e) => {
             if (isDragging) {
-                ball.vx = (ball.x - e.offsetX) * 0.12;
-                ball.vy = (ball.y - e.offsetY) * 0.12;
+                ball.vx = (ball.x - e.offsetX) * 0.13;
+                ball.vy = (ball.y - e.offsetY) * 0.13;
                 ball.shooting = true; isDragging = false;
             }
         };
 
+        function createParticles(x, y) {
+            for(let i=0; i<15; i++) {
+                particles.push({ x, y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1, color: '#fb923c' });
+            }
+        }
+
         function draw() {
             gCtx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 골대
-            gCtx.fillStyle = "#ef4444";
-            gCtx.fillRect(hoop.x - hoop.w/2, hoop.y, hoop.w, hoop.h);
-            gCtx.fillStyle = "rgba(239, 68, 68, 0.2)";
-            gCtx.fillRect(hoop.x - hoop.w/2, hoop.y + hoop.h, hoop.h, 40); // 넷 느낌
-            gCtx.fillRect(hoop.x + hoop.w/2 - hoop.h, hoop.y + hoop.h, hoop.h, 40);
+            // 백보드 & 골대
+            gCtx.fillStyle = "#333"; gCtx.fillRect(hoop.boardX, hoop.boardY, hoop.boardW, hoop.boardH); // 백보드
+            gCtx.fillStyle = "#ef4444"; gCtx.fillRect(hoop.x - hoop.w/2, hoop.y, hoop.w, hoop.h); // 림
 
-            // 가이드 궤적 (점선)
+            // 가이드라인
             if (isDragging) {
-                gCtx.beginPath();
-                gCtx.setLineDash([5, 5]);
-                let tx = ball.x, ty = ball.y;
-                let tvx = (ball.x - mouseX) * 0.12;
-                let tvy = (ball.y - mouseY) * 0.12;
-                for (let i = 0; i < 30; i++) {
-                    gCtx.lineTo(tx, ty);
-                    tx += tvx; ty += tvy; tvy += 0.25;
-                }
-                gCtx.strokeStyle = "rgba(255,255,255,0.3)";
-                gCtx.stroke();
-                gCtx.setLineDash([]);
+                gCtx.beginPath(); gCtx.setLineDash([5, 8]);
+                let tx = ball.x, ty = ball.y, tvx = (ball.x - mouseX) * 0.13, tvy = (ball.y - mouseY) * 0.13;
+                gCtx.moveTo(tx, ty);
+                for (let i = 0; i < 25; i++) { tx += tvx; ty += tvy; tvy += 0.25; gCtx.lineTo(tx, ty); }
+                gCtx.strokeStyle = "rgba(255,255,255,0.4)"; gCtx.stroke(); gCtx.setLineDash([]);
+            }
+
+            // 잔상 효과
+            if (ball.shooting) {
+                ball.trail.push({x: ball.x, y: ball.y});
+                if(ball.trail.length > 8) ball.trail.shift();
+                ball.trail.forEach((t, i) => {
+                    gCtx.beginPath(); gCtx.arc(t.x, t.y, ball.r * (i/8), 0, Math.PI*2);
+                    gCtx.fillStyle = `rgba(251, 146, 60, ${i/15})`; gCtx.fill();
+                });
             }
 
             // 공
-            gCtx.beginPath();
-            gCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
-            gCtx.fillStyle = ball.shooting ? "#fff" : "#fb923c";
-            gCtx.shadowBlur = 15; gCtx.shadowColor = ball.shooting ? "#fff" : "#fb923c";
-            gCtx.fill();
-            gCtx.shadowBlur = 0;
+            gCtx.beginPath(); gCtx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+            gCtx.fillStyle = isDragging ? "#fb923c" : "#fff";
+            gCtx.shadowBlur = 15; gCtx.shadowColor = "#fb923c"; gCtx.fill(); gCtx.shadowBlur = 0;
 
             if (ball.shooting) {
                 ball.x += ball.vx; ball.y += ball.vy; ball.vy += 0.25;
+                // 백보드 충돌
+                if (ball.x + ball.r > hoop.boardX && ball.y > hoop.boardY && ball.y < hoop.boardY + hoop.boardH) {
+                    ball.vx *= -0.6; ball.x = hoop.boardX - ball.r;
+                }
                 // 골인 판정
                 if (ball.y > hoop.y && ball.y < hoop.y + 15 && ball.x > hoop.x - hoop.w/2 && ball.x < hoop.x + hoop.w/2 && ball.vy > 0) {
                     score++; document.getElementById('scoreDisplay').innerText = score;
-                    ball.vy = -2; // 튕기는 효과
-                    setTimeout(initPositions, 500);
+                    createParticles(ball.x, ball.y);
+                    ball.vy = 2; // 통과 효과
+                    setTimeout(initPositions, 600);
                 }
-                // 리셋 조건
-                if (ball.y > canvas.height + 50 || ball.x > canvas.width + 50 || ball.x < -50) initPositions();
+                if (ball.y > canvas.height + 50 || ball.x < -50 || ball.x > canvas.width + 50) initPositions();
             }
+
+            // 파티클 업데이트
+            particles.forEach((p, i) => {
+                p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+                gCtx.fillStyle = `rgba(251, 146, 60, ${p.life})`;
+                gCtx.fillRect(p.x, p.y, 4, 4);
+                if(p.life <= 0) particles.splice(i, 1);
+            });
+
             requestAnimationFrame(draw);
         }
 
-        function resetGame() { score = 0; document.getElementById('scoreDisplay').innerText = "0"; initPositions(); }
-
-        draw();
-        loadData();
+        window.addEventListener('resize', resize);
+        resize(); draw(); loadData();
     </script>
 </body>
 </html>
